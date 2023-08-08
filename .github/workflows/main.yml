@@ -1,0 +1,33 @@
+name: GitHub Actions Build and Deploy Demo
+on:
+  pull_request:
+    types: [opened, reopened]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2 
+      with:
+        persist-credentials: false
+
+    - name: Install LCOV
+      shell: bash
+      run: |
+          sudo apt-get --assume-yes install lcov > /dev/null
+
+    - name: Build
+      shell: bash
+      run: |
+        g++ testa.cpp a.cpp -fprofile-arcs -ftest-coverage -lgcov -o test_cover
+        lcov -c -i -d ./ -o init.info
+        ./test_cover
+        lcov -c -d ./ -o cover.info
+        lcov --remove total.info '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' '*/third/*' 'testa.cpp' -o final.info
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+          file: cover.info
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
